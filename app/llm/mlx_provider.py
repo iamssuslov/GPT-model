@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from app.api.llm.base import LLMProvider
+from app.llm.base import LLMProvider
 
 
 class MLXProvider(LLMProvider):
