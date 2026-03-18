@@ -1,7 +1,7 @@
 from typing import List, Dict
 import requests
 
-from app.api.llm.base import LLMProvider
+from app.llm.base import LLMProvider
 
 
 class OllamaProvider(LLMProvider):
