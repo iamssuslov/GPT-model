@@ -24,6 +24,16 @@ class ChatRepository:
             .all()
         )
 
+    def update_session_summary(self, session_id: int, summary: str | None) -> ChatSession:
+        session = self.get_session(session_id)
+        if session is None:
+            raise ValueError(f"Session with id={session_id} not found")
+
+        session.summary = summary
+        self.db.commit()
+        self.db.refresh(session)
+        return session
+
     def add_message(self, session_id: int, role: str, content: str) -> ChatMessage:
         message = ChatMessage(
             session_id=session_id,

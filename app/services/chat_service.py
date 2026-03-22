@@ -6,6 +6,7 @@ from app.llm.ollama_provider import OllamaProvider
 from app.memory.repository import ChatRepository
 from app.memory.service import MemoryService
 from app.services.context_manager import ContextManager
+from app.services.summarizer import SummarizerService
 
 
 DEFAULT_SYSTEM_PROMPT = (
@@ -37,6 +38,7 @@ class ChatService:
             max_chars=settings.chat_context_max_chars,
             max_messages=settings.chat_history_limit,
         )
+        self.summarizer = SummarizerService(self.provider)
 
     def create_session(self, title: str = "New chat"):
         return self.memory.create_session(title=title)
@@ -52,12 +54,20 @@ class ChatService:
 
         self.memory.save_user_message(session.id, user_message)
 
-        history = self.memory.get_history(
-            session_id=session.id,
-            limit=settings.chat_history_limit,
+        full_history = self.memory.get_full_history(session.id)
+
+        updated_summary, recent_messages = self.summarizer.update_summary(
+            existing_summary=session.summary,
+            full_history=full_history,
         )
 
-        context_messages = self.context_manager.build_context(history)
+        if updated_summary != session.summary:
+            self.memory.update_summary(session.id, updated_summary)
+
+        context_messages = self.context_manager.build_context(
+            messages=recent_messages,
+            summary=updated_summary,
+        )
 
         answer = self.provider.generate(
             system_prompt=DEFAULT_SYSTEM_PROMPT,

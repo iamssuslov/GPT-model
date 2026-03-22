@@ -15,5 +15,9 @@ class Settings(BaseSettings):
     chat_history_limit: int = 20
     chat_context_max_chars: int = 6000
 
+    summary_trigger_messages: int = 12
+    summary_max_chars: int = 2000
+    summary_keep_recent_messages: int = 6
+
 
 settings = Settings()
