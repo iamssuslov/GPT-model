@@ -5,6 +5,7 @@ from app.llm.mlx_provider import MLXProvider
 from app.llm.ollama_provider import OllamaProvider
 from app.memory.repository import ChatRepository
 from app.memory.service import MemoryService
+from app.services.context_manager import ContextManager
 
 
 DEFAULT_SYSTEM_PROMPT = (
@@ -32,12 +33,19 @@ class ChatService:
     def __init__(self, db: Session):
         self.provider = get_llm_provider()
         self.memory = MemoryService(ChatRepository(db))
+        self.context_manager = ContextManager(
+            max_chars=settings.chat_context_max_chars,
+            max_messages=settings.chat_history_limit,
+        )
 
     def create_session(self, title: str = "New chat"):
         return self.memory.create_session(title=title)
 
     def list_sessions(self):
         return self.memory.repository.list_sessions()
+
+    def get_session_messages(self, session_id: int):
+        return self.memory.get_all_messages(session_id)
 
     def ask(self, user_message: str, session_id: int | None = None) -> dict:
         session = self.memory.get_or_create_session(session_id)
@@ -49,9 +57,11 @@ class ChatService:
             limit=settings.chat_history_limit,
         )
 
+        context_messages = self.context_manager.build_context(history)
+
         answer = self.provider.generate(
             system_prompt=DEFAULT_SYSTEM_PROMPT,
-            messages=history,
+            messages=context_messages,
         )
 
         self.memory.save_assistant_message(session.id, answer)
