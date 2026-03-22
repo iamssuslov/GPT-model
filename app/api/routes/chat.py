@@ -15,6 +15,7 @@ class CreateSessionRequest(BaseModel):
 class SessionResponse(BaseModel):
     session_id: int
     title: str
+    summary: str | None = None
 
 
 class ChatRequest(BaseModel):
@@ -30,6 +31,7 @@ class ChatResponse(BaseModel):
 class SessionListItem(BaseModel):
     session_id: int
     title: str
+    summary: str | None = None
 
 
 class MessageItem(BaseModel):
@@ -44,7 +46,11 @@ def create_session(request: CreateSessionRequest, db: Session = Depends(get_db))
     try:
         service = ChatService(db)
         session = service.create_session(title=request.title)
-        return SessionResponse(session_id=session.id, title=session.title)
+        return SessionResponse(
+            session_id=session.id,
+            title=session.title,
+            summary=session.summary,
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
@@ -55,7 +61,11 @@ def list_sessions(db: Session = Depends(get_db)):
         service = ChatService(db)
         sessions = service.list_sessions()
         return [
-            SessionListItem(session_id=session.id, title=session.title)
+            SessionListItem(
+                session_id=session.id,
+                title=session.title,
+                summary=session.summary,
+            )
             for session in sessions
         ]
     except Exception as exc:

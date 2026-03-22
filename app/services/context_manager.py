@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import Dict, List
 
 
 class ContextManager:
@@ -10,11 +10,11 @@ class ContextManager:
     def _message_size(message: Dict[str, str]) -> int:
         return len(message.get("content", ""))
 
-    def build_context(self, messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        """
-        Берёт последние max_messages сообщений и дополнительно
-        ограничивает итоговый контекст по суммарному числу символов.
-        """
+    def build_context(
+        self,
+        messages: List[Dict[str, str]],
+        summary: str | None = None,
+    ) -> List[Dict[str, str]]:
         recent_messages = messages[-self.max_messages:]
 
         selected: List[Dict[str, str]] = []
@@ -39,4 +39,12 @@ class ContextManager:
             total_chars += message_size
 
         selected.reverse()
+
+        if summary:
+            summary_message = {
+                "role": "system",
+                "content": f"Краткое резюме предыдущего диалога:\n{summary}",
+            }
+            return [summary_message, *selected]
+
         return selected
