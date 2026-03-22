@@ -18,6 +18,12 @@ class MemoryService:
 
         return session
 
+    def get_session(self, session_id: int):
+        session = self.repository.get_session(session_id)
+        if session is None:
+            raise ValueError(f"Session with id={session_id} not found")
+        return session
+
     def save_user_message(self, session_id: int, content: str):
         return self.repository.add_message(session_id=session_id, role="user", content=content)
 
@@ -27,3 +33,16 @@ class MemoryService:
     def get_history(self, session_id: int, limit: int):
         messages = self.repository.get_messages(session_id=session_id, limit=limit)
         return [{"role": msg.role, "content": msg.content} for msg in messages]
+
+    def get_all_messages(self, session_id: int):
+        self.get_session(session_id)
+        messages = self.repository.get_messages(session_id=session_id, limit=None)
+        return [
+            {
+                "id": msg.id,
+                "role": msg.role,
+                "content": msg.content,
+                "created_at": msg.created_at.isoformat(),
+            }
+            for msg in messages
+        ]

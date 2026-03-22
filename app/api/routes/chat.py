@@ -32,6 +32,13 @@ class SessionListItem(BaseModel):
     title: str
 
 
+class MessageItem(BaseModel):
+    id: int
+    role: str
+    content: str
+    created_at: str
+
+
 @router.post("/sessions", response_model=SessionResponse)
 def create_session(request: CreateSessionRequest, db: Session = Depends(get_db)):
     try:
@@ -51,6 +58,18 @@ def list_sessions(db: Session = Depends(get_db)):
             SessionListItem(session_id=session.id, title=session.title)
             for session in sessions
         ]
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.get("/sessions/{session_id}/messages", response_model=list[MessageItem])
+def get_session_messages(session_id: int, db: Session = Depends(get_db)):
+    try:
+        service = ChatService(db)
+        messages = service.get_session_messages(session_id)
+        return [MessageItem(**message) for message in messages]
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
