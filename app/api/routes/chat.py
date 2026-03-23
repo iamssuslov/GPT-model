@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -57,6 +57,12 @@ class SearchResultItem(BaseModel):
     content: str
     metadata: dict
     distance: float | None = None
+
+
+class UploadResponse(BaseModel):
+    filename: str
+    path: str
+    size: int
 
 
 @router.post("/sessions", response_model=SessionResponse)
@@ -133,6 +139,25 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@router.post("/rag/upload", response_model=UploadResponse)
+async def upload_document(file: UploadFile = File(...)):
+    try:
+        if not file.filename:
+            raise ValueError("Filename is required")
+
+        content = await file.read()
+        rag_service = RagService()
+        result = rag_service.save_uploaded_file(
+            filename=file.filename,
+            content=content,
+        )
+        return UploadResponse(**result)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

@@ -3,19 +3,38 @@ from pathlib import Path
 from app.core.config import settings
 from app.rag.chunker import TextChunker
 from app.rag.embeddings import EmbeddingService
-from app.rag.loaders import SUPPORTED_EXTENSIONS, load_document
+from app.rag.loaders import SUPPORTED_EXTENSIONS, is_supported_file, load_document
 from app.rag.store import VectorStore
 
 
 class RagService:
     def __init__(self):
         self.docs_path = Path(settings.docs_path)
+        self.docs_path.mkdir(parents=True, exist_ok=True)
+
         self.chunker = TextChunker(
             chunk_size=settings.rag_chunk_size,
             chunk_overlap=settings.rag_chunk_overlap,
         )
         self.embedding_service = EmbeddingService(settings.embedding_model)
         self.vector_store = VectorStore(settings.chroma_path)
+
+    def save_uploaded_file(self, filename: str, content: bytes) -> dict:
+        safe_name = Path(filename).name
+        target_path = self.docs_path / safe_name
+
+        if not is_supported_file(target_path):
+            raise ValueError(
+                f"Unsupported file type. Allowed: {', '.join(sorted(SUPPORTED_EXTENSIONS))}"
+            )
+
+        target_path.write_bytes(content)
+
+        return {
+            "filename": safe_name,
+            "path": str(target_path),
+            "size": len(content),
+        }
 
     def list_supported_files(self) -> list[Path]:
         if not self.docs_path.exists():

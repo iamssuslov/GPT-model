@@ -24,6 +24,16 @@ def api_post(path: str, payload: dict | None = None) -> Any:
     return response.json()
 
 
+def api_upload(path: str, filename: str, content: bytes, mime_type: str) -> Any:
+    response = requests.post(
+        f"{API_BASE_URL}{path}",
+        files={"file": (filename, content, mime_type)},
+        timeout=180,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
 def load_sessions() -> list[dict]:
     return api_get("/sessions")
 
@@ -49,6 +59,10 @@ def send_message(message: str, session_id: int | None, use_rag: bool) -> dict:
 
 def index_documents() -> dict:
     return api_post("/rag/index")
+
+
+def upload_document(filename: str, content: bytes, mime_type: str) -> dict:
+    return api_upload("/rag/upload", filename, content, mime_type)
 
 
 def init_state() -> None:
@@ -97,6 +111,27 @@ def render_sidebar() -> None:
             st.session_state.last_error = str(exc)
 
     st.sidebar.divider()
+    st.sidebar.subheader("Документы")
+
+    uploaded_file = st.sidebar.file_uploader(
+        "Загрузить .txt или .md",
+        type=["txt", "md"],
+        accept_multiple_files=False,
+    )
+
+    if uploaded_file is not None:
+        if st.sidebar.button("Сохранить файл", use_container_width=True):
+            try:
+                result = upload_document(
+                    filename=uploaded_file.name,
+                    content=uploaded_file.getvalue(),
+                    mime_type=uploaded_file.type or "text/plain",
+                )
+                st.sidebar.success(
+                    f"Файл загружен: {result['filename']} ({result['size']} байт)"
+                )
+            except Exception as exc:
+                st.session_state.last_error = str(exc)
 
     if st.sidebar.button("Переиндексировать документы", use_container_width=True):
         try:
@@ -173,11 +208,12 @@ def render_input() -> None:
     session_id = st.session_state.current_session_id
 
     try:
-        result = send_message(
-            message=prompt,
-            session_id=session_id,
-            use_rag=st.session_state.use_rag,
-        )
+        with st.spinner("Модель думает..."):
+            result = send_message(
+                message=prompt,
+                session_id=session_id,
+                use_rag=st.session_state.use_rag,
+            )
 
         st.session_state.current_session_id = result["session_id"]
         refresh_sessions()
