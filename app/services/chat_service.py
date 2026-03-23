@@ -5,6 +5,7 @@ from app.llm.mlx_provider import MLXProvider
 from app.llm.ollama_provider import OllamaProvider
 from app.memory.repository import ChatRepository
 from app.memory.service import MemoryService
+from app.rag.service import RagService
 from app.services.context_manager import ContextManager
 from app.services.summarizer import SummarizerService
 
@@ -39,6 +40,7 @@ class ChatService:
             max_messages=settings.chat_history_limit,
         )
         self.summarizer = SummarizerService(self.provider)
+        self.rag = RagService()
 
     def create_session(self, title: str = "New chat"):
         return self.memory.create_session(title=title)
@@ -49,7 +51,12 @@ class ChatService:
     def get_session_messages(self, session_id: int):
         return self.memory.get_all_messages(session_id)
 
-    def ask(self, user_message: str, session_id: int | None = None) -> dict:
+    def ask(
+        self,
+        user_message: str,
+        session_id: int | None = None,
+        use_rag: bool = False,
+    ) -> dict:
         session = self.memory.get_or_create_session(session_id)
 
         self.memory.save_user_message(session.id, user_message)
@@ -68,6 +75,14 @@ class ChatService:
             messages=recent_messages,
             summary=updated_summary,
         )
+
+        if use_rag:
+            rag_context = self.rag.build_rag_context(user_message)
+            if rag_context:
+                context_messages = [
+                    {"role": "system", "content": rag_context},
+                    *context_messages,
+                ]
 
         answer = self.provider.generate(
             system_prompt=DEFAULT_SYSTEM_PROMPT,
