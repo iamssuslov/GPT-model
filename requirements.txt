@@ -2,3 +2,6 @@ fastapi[standard]
 requests
 pydantic-settings
 sqlalchemy
+chromadb
+sentence-transformers
+python-multipart
