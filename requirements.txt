@@ -5,3 +5,4 @@ sqlalchemy
 chromadb
 sentence-transformers
 python-multipart
+streamlit

@@ -90,6 +90,22 @@ def list_sessions(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
+@router.get("/sessions/{session_id}", response_model=SessionResponse)
+def get_session(session_id: int, db: Session = Depends(get_db)):
+    try:
+        service = ChatService(db)
+        session = service.memory.get_session(session_id)
+        return SessionResponse(
+            session_id=session.id,
+            title=session.title,
+            summary=session.summary,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
 @router.get("/sessions/{session_id}/messages", response_model=list[MessageItem])
 def get_session_messages(session_id: int, db: Session = Depends(get_db)):
     try:
